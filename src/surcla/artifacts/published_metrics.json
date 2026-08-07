@@ -1,0 +1,43 @@
+{
+  "artifact_version": "1.0.0",
+  "metafeature_schema": "manual-v5",
+  "corpus": "v5_full: 7995 generated parents, 23985 cells, single labelling seed",
+  "families": ["Kriging", "LGBM", "LR", "Lasso", "MLP", "PCE", "PCK", "RF", "Ridge", "XGB"],
+  "calibration": {
+    "note": "constant shift fitted on the development suite's prediction-realization pairs; band = median |error| of the shifted prediction on the sealed suite",
+    "embed": {
+      "0": {"shift": -0.0395, "band": 0.1533},
+      "1": {"shift": -0.0497, "band": 0.1401},
+      "2": {"shift": 0.0714, "band": 0.1987}
+    },
+    "manual": {
+      "0": {"shift": 0.1153, "band": 0.1708},
+      "1": {"shift": 0.1067, "band": 0.1708},
+      "2": {"shift": 0.1104, "band": 0.1787}
+    }
+  },
+  "failure": {
+    "tau": 0.5,
+    "families": ["Kriging", "MLP"],
+    "auc_corpus_grouped_cv": {"Kriging": 0.970, "MLP": 0.709},
+    "auc_transfer_v1": {"Kriging": 0.678, "MLP": null},
+    "note": "heads on the manual metafeature schema; the veto demotes, never drops"
+  },
+  "sealed_v2": {
+    "deployed_arm": "corpus-trained d2v-v3 embedding + RF regret decoder",
+    "n_datasets": 27,
+    "acc_top1": {"mean": 0.2469, "sd": 0.0286},
+    "acc_top2": {"mean": 0.4198, "sd": 0.0536},
+    "acc_top3": {"mean": 0.5048, "sd": 0.0559},
+    "median_regret_at_k": {"1": 0.0032, "2": 0.0003, "3": 0.0},
+    "mean_regret_at_k": {"1": 0.0565, "2": 0.0284, "3": 0.0184},
+    "rank_spearman": {"mean": 0.4241, "sd": 0.0337},
+    "acc_within_0p01_r2": {"mean": 0.602, "sd": 0.045},
+    "source_split_median_regret": {"CTR23": 0.017, "VLSE": 0.0003}
+  },
+  "advice": {
+    "small_sample_n": 100,
+    "cheap_pool_n": 250,
+    "reject_attainability": 0.5
+  }
+}
