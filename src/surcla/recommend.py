@@ -23,6 +23,7 @@ from .d2v import embed, load_encoder
 from .decoder import RegretDecoder
 from .failure import FailureHeads
 from .metafeatures import extract
+from .warmstart import WarmStart, lookup
 
 _PIPELINES: dict = {}
 
@@ -34,7 +35,7 @@ class Candidate:
     band: float                  # published median |error| of that estimate
     p_fail: float | None         # failure probability (fragile families only)
     vetoed: bool                 # p_fail > tau: demoted to the bottom
-    warm_start: dict | None = None   # populated in a later release
+    warm_start: WarmStart | None = None   # configuration to fit first
 
     def __repr__(self):
         veto = "  VETOED" if self.vetoed else ""
@@ -141,7 +142,8 @@ def recommend(X, y, k: int = 3, arm: str = "embed", seed: int = 0,
 
     cands = [Candidate(family=f, predicted_r2=float(calibrated[f]), band=band,
                        p_fail=p_fail.get(f),
-                       vetoed=p_fail.get(f, 0.0) > heads.tau)
+                       vetoed=p_fail.get(f, 0.0) > heads.tau,
+                       warm_start=lookup(f, len(y), X.shape[1]))
              for f in calibrated.index]
     cands.sort(key=lambda c: (c.vetoed, -c.predicted_r2))
 

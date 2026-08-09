@@ -49,6 +49,24 @@ def test_deterministic(report):
     assert again.attainability == report.attainability
 
 
+def test_warm_starts(report):
+    """Every candidate carries a starting configuration from a matching band."""
+    from surcla.warmstart import lookup
+    for c in report.candidates:
+        assert c.warm_start is not None
+        assert c.warm_start.n_cells > 0
+        assert c.warm_start.band == "n<=100, d<=5"
+    by_family = {c.family: c for c in report.candidates}
+    assert isinstance(by_family["Kriging"].warm_start.config, str)   # variant tag
+    assert by_family["Kriging"].warm_start.meaning                   # decoded
+    assert isinstance(by_family["LGBM"].warm_start.config, dict)     # parameters
+    # bands actually differ with size
+    big = lookup("LGBM", 5000, 30)
+    assert big.band == "n>700, d>15"
+    assert big.config != by_family["LGBM"].warm_start.config
+    assert lookup("NoSuchFamily", 100, 5) is None
+
+
 def test_attain_r2_threshold(report):
     """The usefulness threshold is the caller's; the estimate does not move."""
     strict = recommend(GOLD["cell_small_a_X"], GOLD["cell_small_a_y"],
