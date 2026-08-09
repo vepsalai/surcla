@@ -47,7 +47,8 @@ class Candidate:
 class Report:
     candidates: list[Candidate]  # all families, ranked; vetoed ones last
     attainability: float         # best calibrated predicted R²
-    reject: bool                 # attainability below the descriptive floor
+    reject: bool                 # attainability below attain_r2
+    attain_r2: float             # the usefulness threshold in force
     n_train: int
     k: int
     regret_at_k: dict            # published sealed-suite regret at k = 1..3
@@ -58,7 +59,8 @@ class Report:
     def __repr__(self):
         head = (f"SurCla report (n={self.n_train}, arm={self.arm}): "
                 f"attainability {self.attainability:.3f}"
-                + (", REJECT" if self.reject else ""))
+                + (f", REJECT (below attain_r2={self.attain_r2:g})"
+                   if self.reject else ""))
         lines = [head] + [f"  {i + 1}. {c!r}"
                           for i, c in enumerate(self.candidates[:max(self.k, 3)])]
         if self.advice:
@@ -91,13 +93,22 @@ def _pipeline(arm: str, seed: int):
     return _PIPELINES[key]
 
 
-def recommend(X, y, k: int = 3, arm: str = "embed", seed: int = 0) -> Report:
+def recommend(X, y, k: int = 3, arm: str = "embed", seed: int = 0,
+              attain_r2: float | None = None) -> Report:
     """Recommend surrogate families for (X, y) before fitting any.
 
     k is the regret appetite: how many top-ranked families you intend to fit
     (the published sealed-suite regret at each k ships in the report). Below
     roughly 100 training samples no single pick is trustworthy; fit at least
     the top ranked families and read the attainability estimate.
+
+    attain_r2 is the $R^2$ you consider useful for your application: the
+    report is rejected when the best calibrated estimate falls below it.
+    This is your decision threshold, not a validated one, so set it from what
+    the surrogate is for; the default (0.5) is the low-attainability band the
+    paper uses descriptively. Remember the estimate carries the band quoted on
+    every candidate, so a threshold within that band of the estimate decides
+    little.
     """
     if k not in (1, 2, 3):
         raise ValueError("k must be 1, 2, or 3")
@@ -109,6 +120,8 @@ def recommend(X, y, k: int = 3, arm: str = "embed", seed: int = 0) -> Report:
         raise ValueError("need at least 10 rows and 1 feature")
     if not (np.isfinite(X).all() and np.isfinite(y).all()):
         raise ValueError("X and y must be finite (drop or impute NaNs first)")
+    if attain_r2 is not None and not -1.0 <= float(attain_r2) <= 1.0:
+        raise ValueError("attain_r2 must be an R² value in [-1, 1]")
 
     dec, heads, encoder, sample_rows, emb_cols_by_dim = _pipeline(arm, seed)
     mfs = extract(X, y)
@@ -134,7 +147,8 @@ def recommend(X, y, k: int = 3, arm: str = "embed", seed: int = 0) -> Report:
 
     pub = published_metrics()
     attain = max(c.predicted_r2 for c in cands)
-    reject_floor = float(pub["advice"]["reject_attainability"])
+    floor = (float(pub["advice"]["reject_attainability"])
+             if attain_r2 is None else float(attain_r2))
     small_n = int(pub["advice"]["small_sample_n"])
 
     advice = ""
@@ -143,14 +157,14 @@ def recommend(X, y, k: int = 3, arm: str = "embed", seed: int = 0) -> Report:
                   f"regime; fit at least the top {max(k, 3)} families and "
                   "treat a low attainability estimate as a signal to collect "
                   "data rather than to model harder.")
-    if attain < reject_floor:
-        advice = (f"predicted attainability {attain:.2f} is below "
-                  f"{reject_floor}: no family is expected to reach a usable "
-                  "fit on this data. " + advice).strip()
+    if attain < floor:
+        advice = (f"predicted attainability {attain:.2f} is below your "
+                  f"attain_r2={floor:g}: no family is expected to reach a "
+                  "useful fit on this data. " + advice).strip()
 
     return Report(candidates=cands, attainability=float(attain),
-                  reject=bool(attain < reject_floor), n_train=int(len(y)),
-                  k=k,
+                  reject=bool(attain < floor), attain_r2=floor,
+                  n_train=int(len(y)), k=k,
                   regret_at_k={int(kk): v for kk, v in
                                pub["sealed_v2"]["median_regret_at_k"].items()},
                   advice=advice, arm=arm, seed=seed)

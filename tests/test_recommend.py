@@ -49,6 +49,18 @@ def test_deterministic(report):
     assert again.attainability == report.attainability
 
 
+def test_attain_r2_threshold(report):
+    """The usefulness threshold is the caller's; the estimate does not move."""
+    strict = recommend(GOLD["cell_small_a_X"], GOLD["cell_small_a_y"],
+                       attain_r2=0.95)
+    lenient = recommend(GOLD["cell_small_a_X"], GOLD["cell_small_a_y"],
+                        attain_r2=0.0)
+    assert strict.attainability == lenient.attainability == report.attainability
+    assert strict.reject and not lenient.reject
+    assert strict.attain_r2 == 0.95 and lenient.attain_r2 == 0.0
+    assert "attain_r2=0.95" in strict.advice
+
+
 def test_input_validation():
     with pytest.raises(ValueError):
         recommend(np.ones((5, 2)), np.ones(5))          # too few rows
@@ -58,3 +70,6 @@ def test_input_validation():
     y = np.full(30, np.nan)
     with pytest.raises(ValueError):
         recommend(X, y)                                 # non-finite
+    with pytest.raises(ValueError):
+        recommend(GOLD["cell_small_a_X"], GOLD["cell_small_a_y"],
+                  attain_r2=1.5)                        # out of R² range
