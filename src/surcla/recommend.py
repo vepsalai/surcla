@@ -30,7 +30,7 @@ from .calibration import published_metrics, shift_and_band
 from .d2v import embed, load_encoder
 from .decoder import RegretDecoder
 from .failure import FailureHeads
-from .families import AVAILABLE, build
+from .families import AVAILABLE, MAX_FEATURES, MAX_ROWS, Capped, build
 from .metafeatures import extract
 from .warmstart import WarmStart, lookup
 
@@ -53,7 +53,9 @@ def _as_arrays(X, y):
     return X, y
 
 
-def cross_val_r2(family: str, config, X, y, cv: int = 5, groups=None):
+def cross_val_r2(family: str, config, X, y, cv: int = 5, groups=None,
+                 max_rows: int | None = MAX_ROWS,
+                 max_features: int | None = MAX_FEATURES):
     """Out-of-fold R² of one configuration, measured on the caller's own data.
 
     Every row is predicted by a model that never saw it, then all held-out
@@ -74,6 +76,10 @@ def cross_val_r2(family: str, config, X, y, cv: int = 5, groups=None):
     one label per row, the design-point index, and folds are formed with
     GroupKFold. When groups is omitted and duplicate feature rows are present,
     this warns rather than guessing what they mean.
+
+    `max_rows` and `max_features` reach the UQ families through `build`, so
+    every fold is capped exactly as the labelling run was; see
+    `families.capped`.
     """
     X, y = _as_arrays(X, y)
     if int(cv) < 2:
@@ -117,7 +123,8 @@ def cross_val_r2(family: str, config, X, y, cv: int = 5, groups=None):
     oof = np.empty(n)
     for train, test in splits:
         try:
-            model = build(family, config).fit(X[train], y[train])
+            model = build(family, config, max_rows,
+                          max_features).fit(X[train], y[train])
             oof[test] = np.asarray(model.predict(X[test]), dtype=float).ravel()
         except Exception as exc:                       # any estimator, any cause
             warnings.warn(f"{family}: a cross-validation fold failed to fit "
@@ -158,6 +165,7 @@ class FittedSurrogate:
     cv_folds: int = 0            # folds actually used, after the small-n rules
     cv_note: str = ""            # why the fold count or the score differs
     groups: object = field(default=None, repr=False)  # grouping cv_r2 honoured
+    caps: tuple = field(default=(MAX_ROWS, MAX_FEATURES), repr=False)
     n_configs_tried: int = 1     # configurations evaluated (see refine)
     cv_gain: float = 0.0         # refine's improvement, scored on the folds
                                  # that chose the winner, so biased upward
@@ -202,7 +210,9 @@ class Candidate:
         return (f"{self.family}: predicted R² {self.predicted_r2:.3f} "
                 f"± {self.band:.2f}{pf}{veto}{missing}")
 
-    def fit(self, X, y, cv: int = 5, groups=None) -> FittedSurrogate:
+    def fit(self, X, y, cv: int = 5, groups=None,
+            max_rows: int | None = MAX_ROWS,
+            max_features: int | None = MAX_FEATURES) -> FittedSurrogate:
         """Fit this family on (X, y) and cross-validate it on the same data.
 
         The fit uses the warm start the recommender attached, so the model is
@@ -213,13 +223,14 @@ class Candidate:
         for how it relates to the predicted R². Folds follow the small-n rules
         of `cross_val_r2`, and the returned object records which were used.
 
-        Both numbers here come from all of your rows and all of your columns.
-        The labelling run was not so generous: to keep a corpus of ten thousand
-        datasets affordable it fitted Kriging, PCE and PCK on at most 2000 rows
-        and at most 30 features, ranked by random-forest importance. Past
-        either size this is a larger fit than the one the predicted R² and the
-        warm start were mined from, usually a slower and better one, so cv_r2
-        is the number that describes what you got.
+        Kriging, PCE and PCK are fitted under the labelling run's caps, at most
+        `max_rows` rows and `max_features` features, because those bounds are
+        what their predicted R² describes and what keeps a cubic fit from
+        running for hours; `families.capped` gives the timings. When a cap
+        bites, cv_note says by how much. Pass max_rows=None and
+        max_features=None to use everything, and expect a slower and usually
+        better model than the estimate refers to. The other seven families
+        were labelled on full data and ignore both.
 
         Pass `groups` when rows repeat a design point, so replicates stay in
         one fold; `cross_val_r2` explains what omitting it costs.
@@ -234,12 +245,17 @@ class Candidate:
                           "expect this fit to go wrong, so read cv_r2 before "
                           "trusting it", UserWarning, stacklevel=2)
         config = None if self.warm_start is None else self.warm_start.config
-        model = build(self.family, config).fit(X, y)
-        r2, folds, note = cross_val_r2(self.family, config, X, y, cv, groups)
+        model = build(self.family, config, max_rows, max_features).fit(X, y)
+        r2, folds, note = cross_val_r2(self.family, config, X, y, cv, groups,
+                                       max_rows, max_features)
+        if isinstance(model, Capped):
+            cap_note = model.capped(len(y), X.shape[1])
+            note = "; ".join(n for n in (note, cap_note) if n)
         return FittedSurrogate(family=self.family, model=model, config=config,
                                cv_r2=r2, predicted_r2=self.predicted_r2,
                                band=self.band, n_train=int(len(y)),
-                               cv_folds=folds, cv_note=note, groups=groups)
+                               cv_folds=folds, cv_note=note, groups=groups,
+                               caps=(max_rows, max_features))
 
 
 @dataclass

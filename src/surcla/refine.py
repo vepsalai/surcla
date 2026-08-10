@@ -123,8 +123,9 @@ def refine(fitted: FittedSurrogate, X, y, budget: int = 8,
         The starting point, as returned by `Candidate.fit`.
     X, y : array-like
         The same data the model was fitted on; a different row count is an
-        error rather than a silent rescoring. Any grouping given to
-        `Candidate.fit` is reused, so replicates stay together here too.
+        error rather than a silent rescoring. Any grouping and any input caps
+        given to `Candidate.fit` are reused, so replicates stay together and
+        every configuration is judged under the same bounds.
     budget : int
         Maximum number of configurations evaluated, the incumbent included, so
         the default buys seven alternatives.
@@ -162,12 +163,14 @@ def refine(fitted: FittedSurrogate, X, y, budget: int = 8,
     if cv is None:
         cv = fitted.cv_folds if fitted.cv_folds >= 2 else DEFAULT_CV
     groups = fitted.groups
+    max_rows, max_features = fitted.caps
     start_r2, folds, note = cross_val_r2(family, fitted.config, X, y, cv,
-                                         groups)
+                                         groups, max_rows, max_features)
     best_r2, best_config, best_note, tried = start_r2, fitted.config, note, 1
 
     for candidate in _neighbours(family, fitted.config)[:budget - 1]:
-        r2, _, cand_note = cross_val_r2(family, candidate, X, y, cv, groups)
+        r2, _, cand_note = cross_val_r2(family, candidate, X, y, cv, groups,
+                                        max_rows, max_features)
         tried += 1
         if _better(r2, best_r2):
             best_r2, best_config, best_note = r2, candidate, cand_note
@@ -180,7 +183,7 @@ def refine(fitted: FittedSurrogate, X, y, budget: int = 8,
     if best_config == fitted.config:
         model = fitted.model                # already fitted on all of (X, y)
     else:
-        model = build(family, best_config).fit(X, y)
+        model = build(family, best_config, max_rows, max_features).fit(X, y)
 
     gain = (best_r2 - start_r2
             if np.isfinite(best_r2) and np.isfinite(start_r2) else 0.0)

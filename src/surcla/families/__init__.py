@@ -27,6 +27,7 @@ from __future__ import annotations
 from importlib.util import find_spec
 
 from . import kriging, pce, pck
+from .capped import CAPPED_FAMILIES, MAX_FEATURES, MAX_ROWS, Capped
 from .kriging import KrigingSurrogate
 from .mlp import MLPSurrogate
 from .pce import PCESurrogate
@@ -95,7 +96,8 @@ AVAILABLE = tuple(f for f in FAMILIES
                   or find_spec(_OPTIONAL_PACKAGE[f]) is not None)
 
 
-def build(family: str, config=None):
+def build(family: str, config=None, max_rows: int | None = MAX_ROWS,
+          max_features: int | None = MAX_FEATURES):
     """Unfitted estimator for one family at the warm start `config`.
 
     `config` is a parameter dict, a variant tag for Kriging, PCE and PCK, or
@@ -103,14 +105,25 @@ def build(family: str, config=None):
     understand are dropped with a warning, so a configuration from a newer
     artifact table cannot crash a fit; an unrecognized variant tag raises,
     because there is no sane way to guess which variant was meant.
+
+    Kriging, PCE and PCK come wrapped in the labelling run's input caps, since
+    those bounds are what their labels describe and what keeps a cubic fit
+    finishing; `capped.Capped` explains the reasoning and the cost. Pass
+    max_rows=None or max_features=None to lift them. The other seven families
+    were labelled on full data and ignore both arguments.
     """
     if family not in CONSTRUCTORS:
         raise ValueError(f"unknown family {family!r}; choose from "
                          f"{list(FAMILIES)}")
-    return CONSTRUCTORS[family](config)
+    estimator = CONSTRUCTORS[family](config)
+    if family in CAPPED_FAMILIES and not (max_rows is None
+                                          and max_features is None):
+        return Capped(estimator, max_rows=max_rows, max_features=max_features)
+    return estimator
 
 
-__all__ = ["AVAILABLE", "CONSTRUCTORS", "DEFAULT_VARIANT", "FAMILIES",
+__all__ = ["AVAILABLE", "CAPPED_FAMILIES", "CONSTRUCTORS", "Capped",
+           "DEFAULT_VARIANT", "FAMILIES", "MAX_FEATURES", "MAX_ROWS",
            "VARIANT_TAGS", "build",
            "KrigingSurrogate", "MLPSurrogate", "PCESurrogate",
            "PCKrigingSurrogate", "lasso", "lgbm", "linear_regression",
