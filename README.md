@@ -59,12 +59,16 @@ FittedSurrogate(Kriging _LMS, n_train=140)
 
 They answer different questions and are allowed to disagree. The **predicted
 R²** is formed before any fitting, from the dataset's own characteristics, and
-estimates what this family reaches on data like yours; its band is the
+estimates what this family reaches on unseen data like yours; its band is the
 sealed-suite median absolute error, not a confidence interval, so roughly half
 of datasets land outside it. The **CV R²** is what this one configuration
 actually reached out of fold on your rows. When they diverge, your dataset sits
 away from the corpus, or the warm start suits it poorly, or n is small enough
-that both are noisy.
+that both are noisy. The prediction is the number that speaks to
+generalization: it never saw your rows, so it cannot inherit their optimism,
+while a few folds over a small n can. A high CV R² is a statement about these
+rows under this split; for use beyond them, expect something nearer the
+predicted value.
 
 `report.regret_at_k` carries the published sealed-suite regret at each
 recommendation depth, so choosing `k` is choosing how much risk to buy: 0.003
