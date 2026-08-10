@@ -1,0 +1,67 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The oldest supported interpreter, core dependencies only: proves
+          # the package works without the optional extras and that the
+          # LightGBM and XGBoost paths degrade instead of breaking.
+          - python: "3.10"
+            extras: "."
+          # The newest, with everything, so all ten families are exercised.
+          - python: "3.12"
+            extras: ".[lgbm,xgb]"
+
+    name: py${{ matrix.python }} ${{ matrix.extras }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          # The default torch wheel on Linux carries CUDA and is gigabytes;
+          # this package only ever runs the encoder on CPU.
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install "${{ matrix.extras }}" pytest
+
+      - name: Test
+        # The research-parity tests skip themselves when the research
+        # repository is absent, which it is here; everything else must pass.
+        run: pytest tests/ -q --durations=10
+        env:
+          OMP_NUM_THREADS: "1"
+
+      - name: Smoke test the installed package
+        # Runs from a different directory, so a report that only works inside
+        # the source tree fails here rather than in a user's project.
+        run: |
+          cd "$RUNNER_TEMP"
+          python -c "
+          import numpy as np
+          from surcla import recommend, refine
+          rng = np.random.default_rng(0)
+          X = rng.uniform(-1, 1, size=(120, 4))
+          y = np.sin(3 * X[:, 0]) + X[:, 1] ** 2 + rng.normal(0, 0.05, 120)
+          report = recommend(X, y, k=2)
+          print(report)
+          fitted = report.candidates[0].fit(X, y, cv=3)
+          print(fitted)
+          print(refine(fitted, X, y, budget=3))
+          "
+        env:
+          OMP_NUM_THREADS: "1"
