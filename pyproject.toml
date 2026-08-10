@@ -28,6 +28,10 @@ dependencies = [
     "pyarrow>=14",
 ]
 
+[project.optional-dependencies]
+lgbm = ["lightgbm>=4.0"]
+xgb = ["xgboost>=2.0"]
+
 [project.urls]
 Repository = "https://github.com/vepsalai/surcla"
 

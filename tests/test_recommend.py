@@ -43,10 +43,12 @@ def test_small_sample_advice(report):
 
 
 def test_deterministic(report):
+    """Same query, same answer. The tolerance is the decoder forest summing
+    its trees' predictions across threads, which moves the last bit."""
     again = recommend(GOLD["cell_small_a_X"], GOLD["cell_small_a_y"], k=3)
     assert [c.family for c in again.candidates] == \
            [c.family for c in report.candidates]
-    assert again.attainability == report.attainability
+    assert again.attainability == pytest.approx(report.attainability, abs=1e-12)
 
 
 def test_warm_starts(report):
@@ -73,7 +75,8 @@ def test_attain_r2_threshold(report):
                        attain_r2=0.95)
     lenient = recommend(GOLD["cell_small_a_X"], GOLD["cell_small_a_y"],
                         attain_r2=0.0)
-    assert strict.attainability == lenient.attainability == report.attainability
+    assert strict.attainability == pytest.approx(report.attainability, abs=1e-12)
+    assert lenient.attainability == pytest.approx(report.attainability, abs=1e-12)
     assert strict.reject and not lenient.reject
     assert strict.attain_r2 == 0.95 and lenient.attain_r2 == 0.0
     assert "attain_r2=0.95" in strict.advice
