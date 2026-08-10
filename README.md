@@ -121,6 +121,14 @@ Dataset2Vec v3 encoder that led the sealed evaluation. `arm="manual"` is the 51
 hand-crafted metafeatures, which need no torch pass and are the fallback when
 that matters.
 
+## Reproducing the paper
+
+`reproduce/paper_numbers.py` refits every arm from the shipped artifacts and
+checks the result against what the paper reports, exiting non-zero on any
+mismatch. It takes about four minutes. What it cannot cover, the corpus
+generation, the labelling runs and the encoder training, is mapped in
+[reproduce/README.md](reproduce/README.md).
+
 ## Citing
 
 Paper reference and archived-data DOI to appear here on publication.
