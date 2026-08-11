@@ -21,9 +21,11 @@ pip install git+https://github.com/vepsalai/surcla
 pip install "surcla[lgbm,xgb] @ git+https://github.com/vepsalai/surcla"   # with the boosted families
 ```
 
-On macOS the boosted families also need the OpenMP runtime, `brew install
-libomp`: without it XGBoost and LightGBM fail at import, and the error's
-most eye-catching bullet (32-bit Python) is not the cause.
+On macOS the boosted families also need the OpenMP runtime: without it
+XGBoost and LightGBM fail at import, and the error's most eye-catching
+bullet (32-bit Python) is not the cause. `brew install libomp` provides it;
+without admin rights, run the same pip install inside a conda environment
+and `conda install -c conda-forge llvm-openmp`.
 
 ## Recommend, fit, refine
 
