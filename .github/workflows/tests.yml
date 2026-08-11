@@ -57,7 +57,7 @@ jobs:
           rng = np.random.default_rng(0)
           X = rng.uniform(-1, 1, size=(120, 4))
           y = np.sin(3 * X[:, 0]) + X[:, 1] ** 2 + rng.normal(0, 0.05, 120)
-          report = recommend(X, y, k=2)
+          report = recommend(X, y)
           print(report)
           fitted = report.candidates[0].fit(X, y, cv=3)
           print(fitted)
