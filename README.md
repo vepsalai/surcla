@@ -31,7 +31,7 @@ from surcla import recommend, refine
 
 X, y = fetch_california_housing(return_X_y=True)    # 20,640 rows, 8 features
 
-report = recommend(X, y, k=2)
+report = recommend(X, y)
 print(report)
 ```
 
@@ -83,9 +83,10 @@ while a few folds over a small n can. A high CV R² is a statement about these
 rows under this split; for use beyond them, expect something nearer the
 predicted value.
 
-`report.regret_at_k` carries the published sealed-suite regret at each
-recommendation depth, so choosing `k` is choosing how much risk to buy: 0.003
-median regret at one fitted family, 0.0003 at two, zero at three.
+How many candidates to fit is your move: repeat `report.candidates[i].fit(X, y)`
+down the ranking and stop when satisfied. `report.regret_at_k` prices the
+stopping depths with the published sealed-suite regret: 0.003 median regret
+at one fitted family, 0.0003 at two, zero at three.
 
 ## What it will not do
 

@@ -1,6 +1,6 @@
 """The recommendation report: ranked families, calibrated R², failure risk.
 
-`recommend(X, y, k)` runs the deployed pipeline of the paper: the corpus-
+`recommend(X, y)` runs the deployed pipeline of the paper: the corpus-
 trained Dataset2Vec v3 encoder (eight-draw embedding) feeding a random-forest
 regret decoder trained on the shipped corpus table, with the published
 constant-shift calibration, the failure heads' veto-by-demotion, and the
@@ -265,8 +265,7 @@ class Report:
     reject: bool                 # attainability below attain_r2
     attain_r2: float             # the usefulness threshold in force
     n_train: int
-    k: int
-    regret_at_k: dict            # published sealed-suite regret at k = 1..3
+    regret_at_k: dict            # published sealed-suite regret at depth 1..3
     advice: str
     arm: str
     seed: int
@@ -276,7 +275,7 @@ class Report:
                 f"attainability {self.attainability:.3f}"
                 + (f", REJECT (below attain_r2={self.attain_r2:g})"
                    if self.reject else ""))
-        shown = self.candidates[:max(self.k, 3)]
+        shown = self.candidates[:3]
         lines = [head] + [f"  {i + 1}. {c!r}" for i, c in enumerate(shown)]
         lines.append("  (± is the sealed-suite median |error| of the estimate, "
                      "so roughly half of datasets fall outside it)")
@@ -310,14 +309,16 @@ def _pipeline(arm: str, seed: int):
     return _PIPELINES[key]
 
 
-def recommend(X, y, k: int = 3, arm: str = "embed", seed: int = 0,
+def recommend(X, y, arm: str = "embed", seed: int = 0,
               attain_r2: float | None = None) -> Report:
     """Recommend surrogate families for (X, y) before fitting any.
 
-    k is the regret appetite: how many top-ranked families you intend to fit
-    (the published sealed-suite regret at each k ships in the report). Below
-    roughly 100 training samples no single pick is trustworthy; fit at least
-    the top ranked families and read the attainability estimate.
+    How many of the ranked candidates to fit is the caller's move: fit them
+    in ranking order with `Candidate.fit` and stop when satisfied.
+    `report.regret_at_k` carries the published sealed-suite regret of
+    stopping after one, two, or three. Below roughly 100 training samples no
+    single pick is trustworthy; fit at least the top three and read the
+    attainability estimate.
 
     attain_r2 is the R² you consider useful for your application: the
     report is rejected when the best calibrated estimate falls below it.
@@ -327,8 +328,6 @@ def recommend(X, y, k: int = 3, arm: str = "embed", seed: int = 0,
     every candidate, so a threshold within that band of the estimate decides
     little.
     """
-    if k not in (1, 2, 3):
-        raise ValueError("k must be 1, 2, or 3")
     X, y = _as_arrays(X, y)
     if X.shape[0] < 10 or X.shape[1] < 1:
         raise ValueError("need at least 10 rows and 1 feature")
@@ -368,12 +367,12 @@ def recommend(X, y, k: int = 3, arm: str = "embed", seed: int = 0,
     advice = ""
     if len(y) < small_n:
         advice = (f"n < {small_n}: no single pick is trustworthy in this "
-                  f"regime; fit at least the top {max(k, 3)} families and "
+                  "regime; fit at least the top 3 families and "
                   "treat a low attainability estimate as a signal to collect "
                   "data rather than to model harder.")
-    absent = [c.family for c in cands[:max(k, 3)] if not c.available]
+    absent = [c.family for c in cands[:3] if not c.available]
     if absent:
-        advice = (f"{', '.join(absent)} rank in your top {max(k, 3)} but the "
+        advice = (f"{', '.join(absent)} rank in your top 3 but the "
                   "package is not installed: pip install 'surcla[lgbm,xgb]' "
                   "to fit them. " + advice).strip()
     if attain < floor:
@@ -383,7 +382,7 @@ def recommend(X, y, k: int = 3, arm: str = "embed", seed: int = 0,
 
     return Report(candidates=cands, attainability=float(attain),
                   reject=bool(attain < floor), attain_r2=floor,
-                  n_train=int(len(y)), k=k,
+                  n_train=int(len(y)),
                   regret_at_k={int(kk): v for kk, v in
                                pub["sealed_v2"]["median_regret_at_k"].items()},
                   advice=advice, arm=arm, seed=seed)

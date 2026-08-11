@@ -15,7 +15,7 @@ FAMILIES = {"Kriging", "LGBM", "LR", "Lasso", "MLP", "PCE", "PCK", "RF",
 
 @pytest.fixture(scope="module")
 def report():
-    return recommend(GOLD["cell_small_a_X"], GOLD["cell_small_a_y"], k=3)
+    return recommend(GOLD["cell_small_a_X"], GOLD["cell_small_a_y"])
 
 
 def test_report_structure(report):
@@ -45,7 +45,7 @@ def test_small_sample_advice(report):
 def test_deterministic(report):
     """Same query, same answer. The tolerance is the decoder forest summing
     its trees' predictions across threads, which moves the last bit."""
-    again = recommend(GOLD["cell_small_a_X"], GOLD["cell_small_a_y"], k=3)
+    again = recommend(GOLD["cell_small_a_X"], GOLD["cell_small_a_y"])
     assert [c.family for c in again.candidates] == \
            [c.family for c in report.candidates]
     assert again.attainability == pytest.approx(report.attainability, abs=1e-12)
