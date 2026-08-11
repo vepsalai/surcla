@@ -21,6 +21,10 @@ pip install git+https://github.com/vepsalai/surcla
 pip install "surcla[lgbm,xgb] @ git+https://github.com/vepsalai/surcla"   # with the boosted families
 ```
 
+On macOS the boosted families also need the OpenMP runtime, `brew install
+libomp`: without it XGBoost and LightGBM fail at import, and the error's
+most eye-catching bullet (32-bit Python) is not the cause.
+
 ## Recommend, fit, refine
 
 Runnable as is: the data loader ships with scikit-learn, already a dependency.
