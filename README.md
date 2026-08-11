@@ -67,7 +67,8 @@ install:
 ```python
 fitted = report.candidates[0].fit(X, y)     # warm-started, cross-validated
 better = refine(fitted, X, y, budget=8)     # a few neighbouring configurations
-y_hat  = better.predict(X_new)              # your new inputs, shape (m, 8)
+X_new  = X[:5]                              # stand-in for your new inputs
+y_hat  = better.predict(X_new)
 ```
 
 ```
