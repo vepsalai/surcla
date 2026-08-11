@@ -7,7 +7,7 @@ need a cluster.
 
 | Stage | What it produces | Cost | Reproducible here |
 |---|---|---|---|
-| Corpus generation | 7,995 synthetic datasets from a fitted expression grammar | hours | no, see below |
+| Corpus generation | 7,995 synthetic datasets from three generator priors (structural causal models, a fitted expression grammar, tree-based) | hours | no, see below |
 | Labelling | every family fitted on every cell, 23,985 corpus cells plus the validation suites | ~10k CPU-hours, SLURM array | no |
 | Encoder training | the three Dataset2Vec v3 checkpoints | ~1 GPU-day each | no, but the checkpoints ship |
 | Evaluation | the sealed table, the splits, the bootstrap intervals | ~4 minutes | **yes** |
