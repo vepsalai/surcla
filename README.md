@@ -23,9 +23,18 @@ pip install "surcla[lgbm,xgb] @ git+https://github.com/vepsalai/surcla"   # with
 
 On macOS the boosted families also need the OpenMP runtime: without it
 XGBoost and LightGBM fail at import, and the error's most eye-catching
-bullet (32-bit Python) is not the cause. `brew install libomp` provides it;
-without admin rights, run the same pip install inside a conda environment
-and `conda install -c conda-forge llvm-openmp`.
+bullet (32-bit Python) is not the cause. In a plain venv, `brew install
+libomp` provides it. In a conda environment, do not mix pip's native wheels
+with conda's runtime: torch and scikit-learn wheels each bundle their own
+libomp, and duplicate runtimes can segfault a Jupyter kernel mid-fit rather
+than fail loudly. Install the native stack from conda-forge, so one runtime
+serves everything, and add surcla on top without its pinned dependencies:
+
+```
+conda create -n surcla-env -c conda-forge python=3.12 pytorch scikit-learn numpy scipy pandas pyarrow xgboost lightgbm
+conda activate surcla-env
+pip install --no-deps "surcla @ git+https://github.com/vepsalai/surcla"
+```
 
 ## Recommend, fit, refine
 
