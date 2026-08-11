@@ -23,37 +23,50 @@ pip install "surcla[lgbm,xgb] @ git+https://github.com/vepsalai/surcla"   # with
 
 ## Recommend, fit, refine
 
+Runnable as is: the data loader ships with scikit-learn, already a dependency.
+
 ```python
+from sklearn.datasets import fetch_california_housing
 from surcla import recommend, refine
+
+X, y = fetch_california_housing(return_X_y=True)    # 20,640 rows, 8 features
 
 report = recommend(X, y, k=2)
 print(report)
 ```
 
 ```
-SurCla report (n=140, arm=embed): attainability 0.870
-  1. Kriging: predicted R² 0.870 ± 0.15  p_fail=0.00
-  2. LGBM: predicted R² 0.803 ± 0.15
-  3. XGB: predicted R² 0.799 ± 0.15
+SurCla report (n=20640, arm=embed): attainability 0.851
+  1. XGB: predicted R² 0.851 ± 0.15
+  2. RF: predicted R² 0.816 ± 0.15
+  3. MLP: predicted R² 0.801 ± 0.15  p_fail=0.01
   (± is the sealed-suite median |error| of the estimate, so roughly half of
    datasets fall outside it)
 ```
 
 Fitting a candidate starts it from the configuration that tuning chose on
 corpus datasets of the same size and width, and cross-validates it on your own
-rows:
+rows. The pick lands on XGBoost here, so this dataset wants the `[lgbm,xgb]`
+install:
 
 ```python
 fitted = report.candidates[0].fit(X, y)     # warm-started, cross-validated
 better = refine(fitted, X, y, budget=8)     # a few neighbouring configurations
-y_hat  = better.predict(X_new)
+y_hat  = better.predict(X_new)              # your new inputs, shape (m, 8)
 ```
 
 ```
-FittedSurrogate(Kriging _LMS, n_train=140)
-  predicted R² 0.870 ± 0.15   recommender's estimate for data like yours
-  CV R²        0.988          5-fold on your own data
+FittedSurrogate(XGB, n_train=20640)
+  predicted R² 0.851 ± 0.15   recommender's estimate for data like yours
+  CV R²        0.805          5-fold on your own data
 ```
+
+`refine` lifted the CV R² to 0.824 over its 8 configurations, in about three
+seconds. California housing is one of the 15 sealed CTR23 datasets the paper
+validates on, which makes the demo checkable: in the labelling run the best
+family reached 0.848 R² at the largest training slice and XGB reached 0.829,
+so both the attainability estimate of 0.851 and the refined CV of 0.824 land
+where the published labels say they should.
 
 ## Reading the two accuracy numbers
 
