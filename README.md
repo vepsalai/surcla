@@ -1,4 +1,6 @@
-# SurCla
+<div align="center">
+<img src="assets/surcla_banner.png" alt="SurCla" width="440"/>
+</div>
 
 [![tests](https://github.com/vepsalai/surcla/actions/workflows/tests.yml/badge.svg)](https://github.com/vepsalai/surcla/actions/workflows/tests.yml)
 
