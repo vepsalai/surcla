@@ -78,7 +78,8 @@ FittedSurrogate(XGB, n_train=20640)
 ```
 
 `refine` lifted the CV R² to 0.824 over its 8 configurations, in about three
-seconds. California housing is one of the 15 sealed CTR23 datasets the paper
+seconds. It is a deployment convenience, not part of the paper's evaluation:
+no published number used it. California housing is one of the 15 sealed CTR23 datasets the paper
 validates on, which makes the demo checkable: in the labelling run the best
 family reached 0.848 R² at the largest training slice and XGB reached 0.829,
 so both the attainability estimate of 0.851 and the refined CV of 0.824 land
