@@ -66,10 +66,20 @@ install:
 
 ```python
 fitted = report.candidates[0].fit(X, y)     # warm-started, cross-validated
+print(fitted)
+```
+
+```
+FittedSurrogate(XGB, n_train=20640)
+  predicted R² 0.851 ± 0.15   recommender's estimate for data like yours
+  CV R²        0.805          5-fold on your own data
+```
+
+```python
 better = refine(fitted, X, y, budget=8)     # a few neighbouring configurations
+print(better)
 X_new  = X[:5]                              # stand-in for your new inputs
 y_hat  = better.predict(X_new)
-print(better)
 ```
 
 ```
@@ -79,9 +89,9 @@ FittedSurrogate(XGB, n_train=20640)
   refined over 8 configurations, CV R² +0.019
 ```
 
-`fit` alone reached CV R² 0.805; the refine pass bought the +0.019 in about
-three seconds. `refine` is a deployment convenience, not part of the paper's
-evaluation: no published number used it. California housing is one of the 15 sealed CTR23 datasets the paper
+The refine pass bought its +0.019 in about three seconds. `refine` is a
+deployment convenience, not part of the paper's evaluation: no published
+number used it. California housing is one of the 15 sealed CTR23 datasets the paper
 validates on, which makes the demo checkable: in the labelling run the best
 family reached 0.848 R² at the largest training slice and XGB reached 0.829,
 so both the attainability estimate of 0.851 and the refined CV of 0.824 land
