@@ -159,8 +159,11 @@ that matters.
 ## Reproducing the paper
 
 `reproduce/paper_numbers.py` refits every arm from the shipped artifacts and
-checks the result against what the paper reports, exiting non-zero on any
-mismatch. It takes about four minutes. What it cannot cover, the corpus
+checks the result against what the paper reports, in about four minutes.
+Under the scikit-learn that recorded the artifacts (1.5.2) every number
+matches to 1e-9; under a different version a few near-tied cells flip their
+pick, which the script reports as expected drift rather than failure and
+bounds with per-metric bands. Anything beyond the bands exits non-zero. What it cannot cover, the corpus
 generation, the labelling runs and the encoder training, is mapped in
 [reproduce/README.md](reproduce/README.md).
 

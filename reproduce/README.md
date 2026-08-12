@@ -20,11 +20,18 @@ python reproduce/paper_numbers.py
 
 Refits all four arms on all three seeds from the shipped corpus table and
 embeddings, runs them against validation_v2, and compares every result against
-the recorded run and against the figures the paper reports. The per-seed table
-must agree to 1e-9, being the same computation on the same inputs; the derived
-summaries carry looser tolerances only where resampling is involved. The script
-exits non-zero on any mismatch, so it doubles as a regression test on the
-artifacts.
+the recorded run and against the figures the paper reports. Under the
+scikit-learn that recorded the artifacts (1.5.2) every number agrees to 1e-9,
+being the same computation on the same inputs. A different scikit-learn builds
+marginally different random forests from the same seed, and because the top
+families are near-tied on roughly half the cells, a marginally different
+forest flips a few picks: accuracies move in steps of 1/486, the rank metrics
+in the third decimal. That variation is the paper's near-tie structure showing
+itself, not an artifact problem, so the script prints those differences as
+`~` within per-metric drift bands and still exits zero. Only differences
+beyond the bands exit non-zero, which keeps the script a regression test on
+the artifacts. Across 1.5.2 to 1.9.0 we measured at most 7/486 in the
+accuracies and 0.011 in Spearman, against bands of 0.025 and 0.02.
 
 It checks the four-arm sealed table, the deployed arm's headline figures
 (top-1 and top-3 accuracy, median regret at k = 1 and 2, rank Spearman,
